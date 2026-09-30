@@ -1,5 +1,4 @@
 #include <math.h>
-#include <windows.h>
 #include <iostream>
 
 #include "drawtextures.h"

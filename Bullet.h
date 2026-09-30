@@ -86,11 +86,13 @@ void Bullet::draw() {
 
 void Bullet::shootAnimate() {
     glPushMatrix();
-    draw();
-    translate(player.xstart()+(this->xspd()),(this->yspd()),player.zstart()-(this->zspd()));
-    //scale(2.0,2.0,2.0);
+    glTranslatef(player.xstart() + this->xspd(), 6.0f - this->yspd(), player.zstart() - this->zspd());
+    glDisable(GL_TEXTURE_2D);
+    glColor3f(1.0f, 0.85f, 0.2f);
+    glutSolidSphere(0.35, 8, 8);
+    glEnable(GL_TEXTURE_2D);
+    glColor3f(1.0f, 1.0f, 1.0f);
     glPopMatrix();
-            
 }
 Bullet bullet = Bullet();
  //end function

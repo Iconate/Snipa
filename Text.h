@@ -1,8 +1,11 @@
 #include <iostream>
+#include <stdio.h>
 #define win_width 1024
 #define win_height 768
-int font = (int)GLUT_BITMAP_TIMES_ROMAN_24;
-int font2 = (int)GLUT_BITMAP_TIMES_ROMAN_10;
+/* GLUT font ids are pointers. Storing them in a 32-bit int truncates them
+   on 64-bit macOS and Windows and crashes glutBitmapCharacter. */
+void *font = GLUT_BITMAP_TIMES_ROMAN_24;
+void *font2 = GLUT_BITMAP_TIMES_ROMAN_10;
 
 
 void setOrthographicProjection() 
@@ -47,7 +50,7 @@ class Text{
       private:
               char *text;
               int x,y,z;
-              char buffer[5];
+              char buffer[16];
               char *temp;
               float red,green,blue;
               void *font;
@@ -70,7 +73,8 @@ Text::Text (char *text, int x, int y, int z, float red, float green, float blue)
            this->z = z;
            this->red = red;
            this->green = green;  
-           this->blue = blue;    
+           this->blue = blue;
+           this->font = ::font;
 } 
 
 Text::Text (char *text, int x, int y, int z, void *font){
@@ -91,7 +95,8 @@ Text::Text (char *text, int x, int y, int z){
            this->z = z;
            this->red = 1.0;
            this->blue = 1.0;  
-           this->green = 1.0;       
+           this->green = 1.0;
+           this->font = ::font;
 }      
 
 void Text::draw(){
@@ -130,9 +135,9 @@ void Text::textUpdate(char *text){
      this->text = text;
 }
 
-void Text::textUpdate(int i){ 
-     this->text = itoa(i,buffer,10);
-
+void Text::textUpdate(int i){
+     snprintf(buffer, sizeof(buffer), "%d", i);
+     this->text = buffer;
 }
 
 

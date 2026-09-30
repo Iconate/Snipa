@@ -10,7 +10,7 @@ Right Mouse Button - Toggle Zoom in/Zoom out
 
 K - Starts the game
 
-R - Reload (Reload's a full clip, removes 5 shots from your total ammunition)
+R - Reload (Loads a fresh 5-round clip and uses one spare clip)
 
 
 Game Play:
