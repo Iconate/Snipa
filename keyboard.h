@@ -1,5 +1,8 @@
 #include <math.h>
 
+#ifdef __APPLE__
+#include <CoreGraphics/CoreGraphics.h>
+#endif
 
 #include "menu.h"
 
@@ -14,41 +17,75 @@ bool warped; // used to check if the mouse has gone off screen
 bool jumping = false;
 //double zoom = 5;
 
-void mouseMovement(int x, int y) {
-    if(!warped) {
-		float diffx = x - 1024/2;
-		float diffy = y - 768/2;
+void applyMouseLook(float diffx, float diffy) {
+    float scale = rifle.getZoom() ? 0.01f : 0.25f;
 
-		//keep camera from rotating beyond vertically up/down
-		if(player.xrot()>=-90 && diffy < 0)
-            if(rifle.getZoom()){                     
-			      player.setXrot(player.xrot() + 0.01f*diffy);
-            }else{
-                  player.setXrot(player.xrot() + 0.25f*diffy);
-            }
-		else if(player.xrot()<=90 && diffy > 0)
-			if(rifle.getZoom()){                     
-			      player.setXrot(player.xrot() + 0.01f*diffy);
-            }else{
-                  player.setXrot(player.xrot() + 0.25f*diffy);
-            }
-        
-        if(rifle.getZoom()){  //when player is zoomed in, camera wont move at the same rate as zoomed out
-		    player.setYrot(player.yrot() + 0.01f*diffx); 
-        }else{
-            player.setYrot(player.yrot() + 0.25f*diffx);
-        }
+    //keep camera from rotating beyond vertically up/down
+    if ((player.xrot() >= -90 && diffy < 0) || (player.xrot() <= 90 && diffy > 0))
+        player.setXrot(player.xrot() + scale * diffy);
+    player.setYrot(player.yrot() + scale * diffx);
+}
+
+#ifdef __APPLE__
+/* glutWarpPointer round-trips through the window server on every mouse
+   event. A high-rate mouse then spends more time warping the cursor than
+   drawing, which is why looking around drops to a few frames per second. */
+static void useRelativeMouse() {
+    CGAssociateMouseAndMouseCursorPosition(false);
+}
+
+static float macMouseScale() {
+    static float scale = 0.0f;
+    CGRect bounds;
+    size_t pixelsWide;
+    if (scale > 0.0f)
+        return scale;
+    bounds = CGDisplayBounds(CGMainDisplayID());
+    pixelsWide = CGDisplayPixelsWide(CGMainDisplayID());
+    scale = (bounds.size.width > 0) ? (float)pixelsWide / (float)bounds.size.width : 1.0f;
+    return scale;
+}
+#endif
+
+void setRelativeMouse(bool relative) {
+#ifdef __APPLE__
+    CGAssociateMouseAndMouseCursorPosition(relative ? false : true);
+#else
+    (void)relative;
+#endif
+}
+
+void mouseMovement(int x, int y) {
+#ifdef __APPLE__
+    if (!(inGame && !roundOver))
+        return;
+    int32_t dx = 0;
+    int32_t dy = 0;
+    float pointScale;
+    (void)x;
+    (void)y;
+    useRelativeMouse();
+    CGGetLastMouseDelta(&dx, &dy);
+    pointScale = macMouseScale();
+    if (pointScale > 0.0f)
+        applyMouseLook((float)dx / pointScale, (float)dy / pointScale);
+#else
+    if (!(inGame && !roundOver))
+        return;
+    if(!warped) {
+        applyMouseLook((float)(x - 1024/2), (float)(y - 768/2));
 		warped = true;
 		glutWarpPointer(1024/2, 768/2);
 	}
 	else
 		warped = false;
+#endif
     glutPostRedisplay();
 }
 
 void processMouse(int button, int state, int x, int y) {
      
-	if (state == GLUT_DOWN && inGame == true)  {
+	if (state == GLUT_DOWN && inGame == true && !roundOver)  {
 		if (button == GLUT_LEFT_BUTTON) { //shoot
                
 			     rifle.shoot();
@@ -93,7 +130,57 @@ void moveDirection(int i) {
 
 
 
+void menuDown() {
+    playBeep();
+    if (selection && menuSelection == 0) {
+        diffselect -= 1;
+        if (diffselect < 0)
+            diffselect = 2;
+    }
+    if (!selection) {
+        menuSelection += 1;
+        if (menuSelection > menuItems)
+            menuSelection = 0;
+    }
+}
+
+void menuUp() {
+    playBeep();
+    if (selection && menuSelection == 0) {
+        diffselect += 1;
+        if (diffselect > 2)
+            diffselect = 0;
+    }
+    if (!selection) {
+        menuSelection -= 1;
+        if (menuSelection < 0)
+            menuSelection = menuItems;
+    }
+}
+
+void menuConfirm() {
+    if (selection && menuSelection == 0)
+        go = true;
+    playSelectBeep();
+    selection = true;
+}
+
+void specialKeyDown(int key, int x, int y) {
+    (void)x;
+    (void)y;
+    if (inGame)
+        return;
+    if (key == GLUT_KEY_DOWN)
+        menuDown();
+    else if (key == GLUT_KEY_UP)
+        menuUp();
+    glutPostRedisplay();
+}
+
 void keyboardDown(unsigned char key, int x, int y) { // CHECK IF STRAFE AND FORWARD OR BACK IS PRESSED TO MOVE DIAGONALLY
+
+    if (roundOver)
+        return;
 
     if (inGame == true)   // In Game Controls
     {
@@ -103,7 +190,7 @@ void keyboardDown(unsigned char key, int x, int y) { // CHECK IF STRAFE AND FORW
             case 's' : player.setMovement(1);player.setDirection(2);break;
             case 'a' : player.setMovement(1);player.setDirection(3);break;
             case 'd' : player.setMovement(1);player.setDirection(4);break;
-            case 'r': if(rifle.getClip() != 5) rifle.reload(); set = true; break;
+            case 'r': rifle.reload(); set = true; break;
             //case 32: jumping = true; break;
             case 'k' : startTime = true;
         }
@@ -112,37 +199,15 @@ void keyboardDown(unsigned char key, int x, int y) { // CHECK IF STRAFE AND FORW
         switch(key) 
         {
                case 's': //Down
-               playBeep();
-               if(selection && menuSelection == 0){
-                    diffselect -= 1;
-                    if (diffselect < 0)
-                        diffselect = 2;
-               }
-               if (!selection) {
-                    menuSelection += 1;
-                    if (menuSelection > menuItems)
-                       menuSelection = 0;
-               }
+                    menuDown();
                     break;
                     
                case 'w': //Up
-               playBeep();
-               if(selection && menuSelection == 0){
-                    diffselect += 1;
-                    if (diffselect > 2)
-                        diffselect = 0;
-               }
-               if (!selection) {
-                     menuSelection -=1;
-                     if (menuSelection < 0)
-                        menuSelection = menuItems;
-               }    
-                     break;
+                    menuUp();
+                    break;
                      
                case 13: //Enter
-                    if(selection && menuSelection == 0) go = true;
-                    playSelectBeep();
-                    selection = true;
+                    menuConfirm();
                     break;
                     
                case 'b':

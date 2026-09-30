@@ -58,7 +58,7 @@ void World::draw (GLuint texture) {
     glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, nomat);
     gluSphere(sphere,600,50,50); 
     glPopMatrix();
-//gluDeleteQuadric(sphere); 
+    gluDeleteQuadric(sphere);
 }
 
 // GROUND CLASS

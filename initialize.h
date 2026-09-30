@@ -1,4 +1,5 @@
 #include "BMPLoader.h"
+#include <stdio.h>
 
 bool inGame = false;
 bool startTime = false;
@@ -7,6 +8,12 @@ LOAD_TEXTUREBMP_RESULT loadBMP(const char* filename,
                                unsigned char** bitmapData);
                                
 GLuint grass, sand ,gravel, blockade, crate, world, target, gun, scope,wallt, hedges;
+
+static void loadGameTexture(const char *filename, GLuint *id) {
+    LOAD_TEXTUREBMP_RESULT result = loadOpenGL2DTextureBMP(filename, id, GL_RGB);
+    if (result != LOAD_TEXTUREBMP_SUCCESS)
+        fprintf(stderr, "Snipa: failed to load %s (error %d)\n", filename, (int)result);
+}
 
 //Load Textures for the game
 
@@ -17,17 +24,17 @@ void gameInit() {
     
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glDisable(GL_DEPTH_TEST);
-	loadOpenGL2DTextureBMP("textures/world.bmp", &world, GL_RGB);
+	loadGameTexture("textures/world.bmp", &world);
 	glEnable(GL_DEPTH_TEST);
-    loadOpenGL2DTextureBMP("textures/grass.bmp", &grass, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/crate.bmp", &crate, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/blockade.bmp", &blockade, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/target.bmp", &target, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/building.bmp", &wallt, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/scope.bmp", &scope, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/sand.bmp", &sand, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/gravel.bmp", &gravel, GL_RGB);
-    loadOpenGL2DTextureBMP("textures/hedges.bmp", &hedges, GL_RGB);
+    loadGameTexture("textures/grass.bmp", &grass);
+    loadGameTexture("textures/crate.bmp", &crate);
+    loadGameTexture("textures/blockade.bmp", &blockade);
+    loadGameTexture("textures/target.bmp", &target);
+    loadGameTexture("textures/building.bmp", &wallt);
+    loadGameTexture("textures/scope.bmp", &scope);
+    loadGameTexture("textures/sand.bmp", &sand);
+    loadGameTexture("textures/gravel.bmp", &gravel);
+    loadGameTexture("textures/hedges.bmp", &hedges);
 
 }
 

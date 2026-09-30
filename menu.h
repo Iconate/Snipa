@@ -44,8 +44,8 @@ void menuCheck(bool selection, int menuSelection)
                  playSelectBeep();
                  stopTheme();
                  difficulty = 0;
-                 rifle.setAmmo(50);
                  fintime = 180;
+                 beginRound();
             }
         }else if (diffselect == 1){
             easy.draw(0,1,0);
@@ -56,8 +56,8 @@ void menuCheck(bool selection, int menuSelection)
                  playSelectBeep();
                  stopTheme();
                  difficulty = 1;
-                 rifle.setAmmo(30);
                 fintime = 120;
+                beginRound();
             }
         }else{
             easy.draw(0,1,0);
@@ -68,9 +68,8 @@ void menuCheck(bool selection, int menuSelection)
                  playSelectBeep();
                  stopTheme();
                  difficulty = 2;
-                 rifle.setAmmo(10);
                 fintime = 60;
-                 
+                beginRound();
             }
         }
          

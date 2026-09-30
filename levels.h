@@ -1,10 +1,23 @@
 #include "MapObjects.h"
 #include "Collision.h"
+#include <stdlib.h>
 
 
 Target targets[5];
 
 bool timeSet = true;
+bool lanesReady = false;
+int lanesLevel = 0;
+float targetSpeed[5];
+float targetMinX[5];
+float targetMaxX[5];
+float targetBaseY[5];
+int targetGrace[5];
+int breakTime[5];
+float breakX[5];
+float breakY[5];
+float breakZ[5];
+float targetBaseZ[5];
 
 Hitbox bulletHitbox = Hitbox(0.20);
 Hitbox targetHitbox = Hitbox(3.0); 
@@ -21,16 +34,113 @@ Ground Sand = Ground();
 Crate crates[30];
 Wall wall[10];
 
-//Choose random target to animate from the array
-void animateRandom() {  
-        if (timeSet){
-            targetChoice = rand() % 5;
-            //substitute &target1 for targetChoice in the  array
-            animateTarget(&targets[targetChoice]);
-        }else
-        {
-            animateTarget(&targets[targetChoice]);
+void knockTarget(int index) {
+    float oldX = targets[index].getXpos();
+    float oldZ = targets[index].getZpos();
+    float nextX = oldX;
+    float nextZ = oldZ;
+    int guard = 0;
+    breakX[index] = oldX;
+    breakY[index] = targets[index].getYpos() + targets[index].getHeight();
+    breakZ[index] = oldZ;
+    breakTime[index] = 22;
+    do {
+        float span = targetMaxX[index] - targetMinX[index];
+        nextX = targetMinX[index] + span * ((rand() % 100) / 99.0f);
+        nextZ = targetBaseZ[index] + ((rand() % 5) - 2) * 28.0f;
+        if (nextZ < 70.0f) nextZ = 70.0f;
+        if (nextZ > 360.0f) nextZ = 360.0f;
+        guard += 1;
+    } while (guard < 8 && (nextX - oldX)*(nextX - oldX) + (nextZ - oldZ)*(nextZ - oldZ) < 2500.0f);
+    targets[index].setXpos(nextX);
+    targets[index].setZpos(nextZ);
+    targetSpeed[index] = -targetSpeed[index];
+    targetGrace[index] = 10;
+}
+
+void ensureLanes() {
+    int i;
+    float xs[5], zs[5], speeds[5];
+    if (lanesReady && lanesLevel == level)
+        return;
+    if (level == 2) {
+        xs[0] = -40; zs[0] = 300; speeds[0] = 0.22f;
+        xs[1] = 80;  zs[1] = 150; speeds[1] = -0.30f;
+        xs[2] = 4;   zs[2] = 350; speeds[2] = 0.18f;
+        xs[3] = -50; zs[3] = 200; speeds[3] = -0.26f;
+        xs[4] = 100; zs[4] = 75;  speeds[4] = 0.34f;
+    } else if (level == 3) {
+        xs[0] = 10;  zs[0] = 150; speeds[0] = 0.20f;
+        xs[1] = 30;  zs[1] = 100; speeds[1] = -0.28f;
+        xs[2] = 80;  zs[2] = 75;  speeds[2] = 0.24f;
+        xs[3] = -50; zs[3] = 200; speeds[3] = -0.16f;
+        xs[4] = 100; zs[4] = 75;  speeds[4] = 0.32f;
+    } else {
+        xs[0] = 10;  zs[0] = 200; speeds[0] = 0.22f;
+        xs[1] = 30;  zs[1] = 150; speeds[1] = -0.30f;
+        xs[2] = 80;  zs[2] = 225; speeds[2] = 0.18f;
+        xs[3] = -50; zs[3] = 250; speeds[3] = -0.26f;
+        xs[4] = 100; zs[4] = 125; speeds[4] = 0.34f;
+    }
+    for (i = 0; i < 5; i++) {
+        targetSpeed[i] = speeds[i];
+        targetMinX[i] = xs[i] - 55.0f;
+        targetMaxX[i] = xs[i] + 55.0f;
+        targetBaseY[i] = 8.0f;
+        targetBaseZ[i] = zs[i];
+        targetGrace[i] = 0;
+        breakTime[i] = 0;
+        targets[i].setXpos(xs[i]);
+        targets[i].setYpos(targetBaseY[i]);
+        targets[i].setZpos(zs[i]);
+        targets[i].setHeight(0.0f);
+    }
+    lanesReady = true;
+    lanesLevel = level;
+}
+
+void drawMovingTargets() {
+    int i;
+    ensureLanes();
+    for (i = 0; i < 5; i++) {
+        float x;
+        if (targetGrace[i] > 0)
+            targetGrace[i] -= 1;
+        if (!roundOver) {
+            x = targets[i].getXpos() + targetSpeed[i];
+            if (x > targetMaxX[i]) {
+                x = targetMaxX[i];
+                targetSpeed[i] = -targetSpeed[i];
+            } else if (x < targetMinX[i]) {
+                x = targetMinX[i];
+                targetSpeed[i] = -targetSpeed[i];
+            }
+            targets[i].setXpos(x);
+            targets[i].setYpos(targetBaseY[i] + sin(targets[i].getXpos() * 0.05f) * 1.2f);
         }
+        if (breakTime[i] > 0) {
+            float life = breakTime[i] / 22.0f;
+            int shard;
+            glPushMatrix();
+            glTranslatef(breakX[i], breakY[i], breakZ[i]);
+            for (shard = 0; shard < 3; shard++) {
+                glPushMatrix();
+                glTranslatef((shard - 1) * (1.0f - life) * 5.0f, (1.0f - life) * (2.0f + shard), 0.2f * shard);
+                glRotatef((22 - breakTime[i]) * (35.0f + shard * 20.0f), 1.0f, 1.0f, 0.0f);
+                glScalef(2.4f * life, 2.4f * life, 2.4f * life);
+                targets[i].draw(target);
+                glPopMatrix();
+            }
+            glPopMatrix();
+            if (!roundOver)
+                breakTime[i] -= 1;
+        }
+        glPushMatrix();
+        targets[i].translate(targets[i].getXpos(), targets[i].getYpos() + targets[i].getHeight(), targets[i].getZpos());
+        targets[i].scale(5.0f, 5.0f, 5.0f);
+        targets[i].draw(target);
+        glPopMatrix();
+    }
 }
 
 //sand level
@@ -67,33 +177,6 @@ Sand.draw(sand);
         crates[5].draw(crate);
         glPopMatrix();
         
-        //if time has started, start target animation  
-   
-        if(startTime){
-        //Some function should call these...but they only work when they are in here
-        //I know they should be only called once...but I get gay errors...
-        int i;
-        for(i = 0; i < 10; i++) {
-            targets[i].setYpos(5.0);
-        }
-        targets[0].setXpos(10.0);
-        targets[0].setZpos(200.0);
-        
-        targets[1].setXpos(30.0);
-        targets[1].setZpos(150.0);
-        
-        targets[2].setXpos(80.0);
-        targets[2].setZpos(225.0);
-        
-        targets[3].setXpos(-50.0);
-        targets[3].setZpos(250.0);
-        
-        targets[4].setXpos(100.0);
-        targets[4].setZpos(125.0);
-
-        
-        animateRandom();
-    }
 }
 //grass jungle levell
 void level2() {
@@ -124,23 +207,6 @@ void level2() {
     wall[1].draw(hedges);
     glPopMatrix();
     
-    targets[0].setXpos(-40.0);
-    targets[0].setZpos(300.0);
-        
-    targets[1].setXpos(80.0);
-    targets[1].setZpos(150.0);
-        
-    targets[2].setXpos(4.0);
-    targets[2].setZpos(350.0);
-        
-    targets[3].setXpos(-50.0);
-    targets[3].setZpos(200.0);
-        
-    targets[4].setXpos(100.0);
-    targets[4].setZpos(75.0);
-    
-    animateRandom();
-    
 }
 //moon level
 void level3() {
@@ -158,21 +224,5 @@ void level3() {
     wall[2].draw(wallt);
     glPopMatrix();
     
-    targets[0].setXpos(10.0);
-    targets[0].setZpos(150.0);
-        
-    targets[1].setXpos(30.0);
-    targets[1].setZpos(100.0);
-        
-    targets[2].setXpos(80.0);
-    targets[2].setZpos(75.0);
-        
-    targets[3].setXpos(-50.0);
-    targets[3].setZpos(200.0);
-        
-    targets[4].setXpos(100.0);
-    targets[4].setZpos(75.0);
     Gravel.draw(gravel);
-    
-    animateRandom();
 }

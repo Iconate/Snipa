@@ -14,7 +14,7 @@
 // include line and include the standard OpenGL headers instead,
 // <GL/gl.h> and <GL/glu.h>. If you use Windows but not GLUT 
 // remember to include <windows.h> also.
-#include <GL/glut.h>
+#include "platform.h"
 
 // The following is the function return type. Use this to
 // get information about how the loading operation went.

@@ -1,71 +1,91 @@
 
-float t = 0.0;
+float shotPrevX = 0, shotPrevY = 0, shotPrevZ = 0;
+float shotMuzzleX = 0, shotMuzzleZ = 0;
 
-const Target *  const collision( Target *  tar){
+float bulletX() { return player.xstart() + bullet.xspd(); }
+float bulletY() { return 6.0f - bullet.yspd(); }
+float bulletZ() { return player.zstart() - bullet.zspd(); }
 
-     
-     float xxx = tar->getXpos() - (player.xstart() + bullet.xspd());
-     float yyy = (tar->getYpos()+tar->getHeight()) - (6 - bullet.yspd());
-    
-     float zzz = tar->getZpos() - (player.zstart()- bullet.zspd());
-     
-     if (sqrt( (xxx*xxx) + (yyy*yyy) + (zzz*zzz)) <= 3.20) {
-      score++;
-      if (10 - score == 0){
-        remainingTargets.textUpdate(10);  
-      }else{
-         remainingTargets.textUpdate((10-score));
-    }  
-      rifle.setShooting(false);
-      set = true;
+float segmentDistance2(float ax, float ay, float az, float bx, float by, float bz,
+                       float px, float py, float pz) {
+    float abx = bx - ax, aby = by - ay, abz = bz - az;
+    float apx = px - ax, apy = py - ay, apz = pz - az;
+    float ab2 = abx*abx + aby*aby + abz*abz;
+    float along = 0.0f;
+    float cx, cy, cz;
+    if (ab2 > 0.0001f) {
+        along = (apx*abx + apy*aby + apz*abz) / ab2;
+        if (along < 0.0f) along = 0.0f;
+        if (along > 1.0f) along = 1.0f;
+    }
+    cx = ax + abx*along - px;
+    cy = ay + aby*along - py;
+    cz = az + abz*along - pz;
+    return cx*cx + cy*cy + cz*cz;
 }
-          
+
+void resolveShot() {
+    float bx = bulletX();
+    float by = bulletY();
+    float bz = bulletZ();
+    float dx, dz;
+    int i;
+    for (i = 0; i < 5; i++) {
+        float tx = targets[i].getXpos();
+        float ty = targets[i].getYpos() + targets[i].getHeight();
+        float tz = targets[i].getZpos();
+        if (targetGrace[i] > 0)
+            continue;
+        if (segmentDistance2(shotPrevX, shotPrevY, shotPrevZ, bx, by, bz, tx, ty, tz) <= 49.0f) {
+            registerHit(i);
+            return;
+        }
+    }
+    dx = bx - shotMuzzleX;
+    dz = bz - shotMuzzleZ;
+    if (by < 0.5f || dx*dx + dz*dz > 520.0f * 520.0f)
+        registerMiss();
+    else {
+        shotPrevX = bx;
+        shotPrevY = by;
+        shotPrevZ = bz;
+    }
 }
 
-static void bulletAnimation(int value) { 
-       
-    
-    
+static void bulletAnimation(int value) {
     float yrotrad = (player.yrot() / 180 * 3.141592654f);
     float xrotrad = (player.xrot() / 180 * 3.141592654f);
-    float gravity = 9.8; //   Pulls the bullet down relative to the time traveled
-                          //   **Toy with bullet velocity to get desired results first**
-    if (rifle.getShooting()){
-    
-    if(set){
-            t = 0.0;
-            bullet.setXspd(0.0); 
+    if (rifle.getShooting() && !roundOver) {
+        if (set) {
+            bullet.setXspd(0.0);
             bullet.setYspd(-3.8);
             bullet.setZspd(0.0);
             player.setXstart(player.xpos());
             player.setZstart(player.zpos());
-            bullet.setDirRate(0,sin(yrotrad));
-            bullet.setDirRate(1,sin(xrotrad)); 
-            bullet.setDirRate(2,cos(yrotrad));
+            bullet.setDirRate(0, sin(yrotrad));
+            bullet.setDirRate(1, sin(xrotrad));
+            bullet.setDirRate(2, cos(yrotrad));
+            shotMuzzleX = player.xstart();
+            shotMuzzleZ = player.zstart();
+            shotPrevX = bulletX();
+            shotPrevY = bulletY();
+            shotPrevZ = bulletZ();
             set = false;
-            }
-                        
-          
+        }
 
-        t += 0.005;  // Higher values make pinnicle of the trajectory sooner 
-                    // Shouldn't really be changed ever
-                    // Adjusting bullet.vel can achieve many of the same  results
-                    
-        
-        bullet.setXspd((bullet.xspd()) + (bullet.dirRate(0)*bullet.vel()) + windXY*gravity*(t*t)); 
-        bullet.setYspd((bullet.yspd()) + (bullet.dirRate(1)*bullet.vel()) + 0.5*gravity*(t*t));
-        bullet.setZspd((bullet.zspd()) + (bullet.dirRate(2)*bullet.vel()) + windZY*gravity*(t*t)); 
-        
-        
-        collision(&targets[targetChoice]); // Check collision with current animating target.
-        
-        } 
-        
-     
-    
-    glutTimerFunc (1, bulletAnimation, 0);
-    glutPostRedisplay();
+        bullet.setXspd((bullet.xspd()) + (bullet.dirRate(0)*bullet.vel()) + windXY * 0.02f);
+        bullet.setYspd((bullet.yspd()) + (bullet.dirRate(1)*bullet.vel()) + 0.012f);
+        bullet.setZspd((bullet.zspd()) + (bullet.dirRate(2)*bullet.vel()) + windZY * 0.02f);
+
+        resolveShot();
     }
+
+    glutTimerFunc(1, bulletAnimation, 0);
+    if (gameWindow) {
+        glutSetWindow(gameWindow);
+        glutPostRedisplay();
+    }
+}
 
 int targetTime = 0;
 
@@ -90,7 +110,7 @@ const Target *  const animateTarget( Target *  tar){
         tar->scale(5.0,5.0,5.0);
         tar->draw(target);
         glPopMatrix();
-   
+    return tar;
 }
 
 

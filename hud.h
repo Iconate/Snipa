@@ -1,17 +1,15 @@
+#include <stdio.h>
 #define win_width 1024
 #define win_height 768
 
 
-char buffer[3];
-
+char ammoLine[32] = "5/5  x0";
 
 Text timeError = Text("YOU RAN OUT OF TIME!",(int)(win_width*0.35),(int)(win_height*0.4),0,(void *)font);
 
-Text hudammotext = Text("Ammo :      /",(int)(win_width*0.83),(int)(win_height*0.98307),0,(void *)font);
-Text hudclip = Text((itoa(rifle.getClip(),buffer,10)),(int)(win_width*0.9277),(int)(win_height*0.98307),0,(void *)font);
-Text hudammo = Text((itoa(rifle.getAmmo(),buffer,10)),(int)(win_width*0.9570),(int)(win_height*0.98307),0,(void *)font);
-Text hudtargettext = Text("Targets: ", (int)(10), (int)(60), 0,(void *)font);
-Text remainingTargets = Text("10", (int)(100), (int)(60), 0,(void *)font);
+Text hudammotext = Text(ammoLine,(int)(win_width - 210), 36, 0,(void *)font);
+Text hudtargettext = Text("Score", (int)(win_width/2 - 80), 36, 0,(void *)font);
+Text remainingTargets = Text("0", (int)(win_width/2 + 10), 36, 0,(void *)font);
 
 bool initTime = true;
 bool timeExpired = false;
@@ -42,16 +40,15 @@ void timer(){
 }
 
 void targetText(){
-    remainingTargets.draw(1.0,1.0,1.0);
-    hudtargettext.draw(1.0,1.0,1.0);    
+    remainingTargets.textUpdate(score);
+    hudtargettext.draw(1.0f, 0.92f, 0.15f);
+    remainingTargets.draw(1.0f, 0.92f, 0.15f);
 }
 
 void ammo(){
-        hudammotext.draw(0,0,0);
-        hudclip.draw(); 
-	    hudclip.textUpdate(rifle.getClip());
-	    hudammo.draw(); 
-	    hudammo.textUpdate(rifle.getAmmo());  
+    snprintf(ammoLine, sizeof(ammoLine), "%d/%d  x%d", rifle.getClip(), rifle.getCapacity(), rifle.getAmmo());
+    hudammotext.textUpdate(ammoLine);
+    hudammotext.draw(1.0f, 1.0f, 1.0f);
 }
 
 

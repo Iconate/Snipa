@@ -15,6 +15,7 @@ class Gun {
     private:
         int ammo;
         int clip;
+        int capacity;
         double zoomFactor;
         bool isZoomed;
         bool isShooting;
@@ -30,6 +31,7 @@ class Gun {
         void zoom();
         int getAmmo();
         int getClip();
+        int getCapacity();
         void setAmmo(int);
         bool getZoom();
         bool getShooting();
@@ -37,12 +39,15 @@ class Gun {
         
 };
 
-void Gun::setAmmo(int i){
-    this->ammo = i;   
+void Gun::setAmmo(int spareClips){
+    this->capacity = 5;
+    this->clip = 5;
+    this->ammo = spareClips;
 }
 Gun::Gun() {
     this->ammo = 0;
     this->clip = 5;
+    this->capacity = 5;
     this->zoomFactor = 7;
     this->isZoomed = false;
     this->isShooting = false;
@@ -79,25 +84,29 @@ void Gun::rotate(float angle, float x,float y,float z) {
 }
 //Shooting method, does some checks and plays sound to signal a shot.
 void Gun::shoot() {
-    if (this->clip == 0) {
+    if (this->clip <= 0) {
         reloadError.draw();
+        return;
     }
-    if (this->clip > 0){ 
-        isShooting = true;
-        playShot();
-        set = true;
-        this->clip -= 1;
-   }
+    if (this->isShooting)
+        registerMiss();
+    isShooting = true;
+    playShot();
+    set = true;
+    this->clip -= 1;
 }
 void Gun::reload() {
-    if (this->ammo == 0) {
+    if (this->isShooting)
+        registerMiss();
+    if (this->clip >= this->capacity)
+        return;
+    if (this->ammo <= 0) {
         reloadError.draw();
-    }else {
-        playReload();
-        this->clip = 5;
-        this->ammo -= clip;
+        return;
     }
-    this->isShooting = false;
+    playReload();
+    this->ammo -= 1;
+    this->clip = this->capacity;
 }
 
 //Zoom code, used to zoom the scope when the player needs more accurate shots.
@@ -125,6 +134,10 @@ int Gun::getAmmo() {
 
 int Gun::getClip() {
     return this->clip;
+}
+
+int Gun::getCapacity() {
+    return this->capacity;
 }
 
 bool Gun::getZoom(){
